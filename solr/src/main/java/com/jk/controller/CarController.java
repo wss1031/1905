@@ -63,7 +63,7 @@ public class CarController {
      */
     @RequestMapping("delete")
     public String delete(String id)  {
-
+        System.out.println(id);
         try {
             client.deleteById("core1",id);
             client.commit("core1");
