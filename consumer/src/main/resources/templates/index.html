@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<!--引入shiro的标签库-->
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+
+    <meta charset="UTF-8"/>
+    <title>Insert title here</title>
+
+    <!-- 引入easyui的css样式 -->
+    <link rel="stylesheet" href="../js/jquery-easyui-1.5/themes/default/easyui.css">
+    <!-- 引入easyui的图标css样式 -->
+    <link rel="stylesheet" href="../js/jquery-easyui-1.5/themes/icon.css">
+    <!-- 引入jqury的js文件 -->
+    <script type="text/javascript" src="../js/jquery-easyui-1.5/jquery.min.js"></script>
+    <!-- 引入easyui的js文件 -->
+    <script type="text/javascript" src="../js/jquery-easyui-1.5/jquery.easyui.min.js"></script>
+    <!-- 引入easyui的中文js文件 -->
+    <script type="text/javascript" src="../js/jquery-easyui-1.5/locale/easyui-lang-zh_CN.js"></script>
+</head>
+<body>
+
+<div id="tools">
+    <a shiro:hasPermission="user:delAll"  href="javascript:delAll()" class="easyui-linkbutton" data-options="iconCls:'icon-remove',plain:true">批删</a>
+    <a shiro:hasPermission="user:openAdd"  href="javascript:openAdd()" class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true">新增</a>
+
+
+    <a href="javascript:openUserExcel()" class="easyui-linkbutton" data-options="iconCls:'icon-redo',plain:true">导入</a>
+    <a href="../User/exportExcel?filename=用户表格.xls" class="easyui-linkbutton" data-options="iconCls:'icon-undo',plain:true">导出</a>
+
+    <br>
+    <input type="checkbox" name="ck" value="1">ID
+    <input type="checkbox" name="ck" value="2">账号
+    <input type="checkbox" name="ck" value="3">密码
+    <input type="checkbox" name="ck" value="4">生日
+
+    <hr>
+    <input type="button" value="导出" onclick="derive()">
+    <hr>
+
+</div>
+
+
+
+
+<!-- 定义新增的div -->
+<div id="userDialog" class="easyui-dialog" data-options="closed:true,width:500,height:400,modal:true,buttons:'#buttons'">
+    <form id="userForm" method="post">
+        <input name="userId"  style="display:none">
+        <table>
+            <tr>
+                <td>姓名</td>
+                <td><input class="easyui-textbox" name="username"></td>
+            </tr>
+
+            <tr>
+                <td>密码</td>
+                <td><input class="easyui-textbox" name="userpwd"></td>
+            </tr>
+            <tr>
+                <td>生日</td>
+                <td><input class="easyui-datebox" name="userbirthday"></td>
+            </tr>
+        </table>
+    </form>
+</div>
+<!-- 定义对话框的按钮 -->
+<div id="buttons">
+    <a href="javascript:saveUser()" class="easyui-linkbutton" data-options="iconCls:'icon-ok',plain:true">确定</a>
+    <a  href="javascript:closeDialog()" class="easyui-linkbutton" data-options="iconCls:'icon-cancel',plain:true">取消</a>
+</div>
+
+
+
+<div id="importExcelDialog" class="easyui-dialog" data-options="title:'导入用户信息',modal:true,closed:true,buttons:'#excelButtons'" style="width: 300px;height: 200px">
+    <form id="excelForm" method="post" enctype="multipart/form-data">
+        <input name="file" class="easyui-filebox"/>
+    </form>
+</div>
+<!-- 定义对话框的按钮 -->
+<div id="excelButtons">
+    <a href="javascript:importExcel()" class="easyui-linkbutton" data-options="iconCls:'icon-ok',plain:true">确定</a>
+</div>
+
+<table id="UserTable"></table>
+</body>
+<script>
+    $(function(){
+        queryUser();
+    })
+
+
+
+
+    function queryUser(){
+        $("#UserTable").datagrid({
+            url:"../User/queryUser",
+            width : "900",
+            field: "ck",
+            checkbox:true,
+            hidden:false,
+
+            columns:[
+                [
+                    {field:"checkbox",checkbox:true},
+                    {field:"userId",title:"id",width:250,},
+                    {field:"username",title:"用户名",width:250},
+                    {field:"userpwd",title:"密码",width:150},
+                     {field:"userbirthday",title:"生日",width:150},
+                    {field:"tool",title:"操作",formatter:function(value,row,index){
+                            var str = "<a href='javascript:openUpdate("+row.userId+")'>修改</a>";
+                            return str;
+                        }}
+                ]
+            ],
+
+            toolbar:"#tools"
+        })
+    }
+
+    //打开新增弹框
+    function openAdd(){
+        //清除表单缓存
+        $("#userForm").form("reset");
+        $("#userDialog").dialog({
+            closed:false,
+            title:'新增用户'
+        });
+
+    }
+
+    //关闭新增弹框
+    function closeDialog(){
+        $("#userDialog").dialog("close");
+    }
+
+
+    //保存用户
+    function saveUser(){
+        $("#userForm").form("submit",{
+            url:"../User/addUser",
+            success:function(){
+                //关闭弹框
+                closeDialog();
+                location.href="../page/toindex";
+            }
+        });
+    }
+
+
+    //打开修改弹框：回显表单数据
+    function openUpdate(userId){
+
+        $.ajax({
+            url:"../User/queryUserById",
+            type:"post",
+            data:{userId:userId},
+            success:function(data){
+
+                //回显表单数据
+                $("#userForm").form("load",data);
+
+                //打开弹框
+                $("#userDialog").dialog({
+                    closed:false,
+                    title:'修改用户'
+                });
+            }
+        })
+    }
+
+
+
+     function delAll(){
+         var userId = "";
+         var arr = $("#UserTable").datagrid("getChecked");
+         for (var i = 0; i < arr.length; i++) {
+             userId += "," + arr[i].userId;
+         }
+
+         userId = userId.substring(1);
+
+        if(userId==""){
+            $.messager.alert("提示","请至少选择一条","info")
+            return;
+        }
+        $.messager.confirm("提示","是否确认删除?",function(r){
+            if(r){
+
+                $.ajax({
+
+                    url:"../User/delAll",
+                    type:"post",
+                    data:{userId:userId},
+                    success:function(){
+
+                        $.messager.alert("提示","删除成功!","info");
+
+                        queryUser();
+                    }
+                })
+            }else{
+                $.messager.alert("提示","已取消删除","info");
+            }
+        });
+    }
+
+
+    function openUserExcel(){
+        $("#excelForm").form("reset");
+        $("#importExcelDialog").dialog('open')
+    }
+
+
+
+    function importExcel(){
+       $("#excelForm").form('submit',{
+           url:'../User/importExcel',
+           success:function (data) {
+               alert(data)
+               if (data){
+                   $("#importExcelDialog").dialog('close')
+                   location.href="../page/toindex";
+               }else{
+                   $.messager.alert('提示','导入失败','error');
+               }
+           }
+       })
+    }
+
+
+    derive = function(){
+        var val = ""
+        $("[name='ck']:checked").each(function(){
+            var id = $(this).val();
+            val+=(val==""?id:","+id)
+        })
+        location.href="../User/deriveTable?val="+val;
+    }
+
+
+
+
+</script>
+</html>
